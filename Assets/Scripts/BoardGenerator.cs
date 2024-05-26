@@ -2,7 +2,7 @@ using UnityEngine;
 
 [RequireComponent(typeof(MeshRenderer))]
 [RequireComponent(typeof(MeshFilter))]
-public class Board : MonoBehaviour
+public class BoardGenerator : MonoBehaviour
 {
     public Color whiteColor;
     public Color blackColor;

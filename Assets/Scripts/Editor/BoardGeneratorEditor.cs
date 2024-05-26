@@ -1,8 +1,8 @@
 using UnityEngine;
 using UnityEditor;
 
-[CustomEditor(typeof(Board))]
-public class BoardEditor : Editor
+[CustomEditor(typeof(BoardGenerator))]
+public class BoardGeneratorEditor : Editor
 {
     public Color prevWhiteColor;
     public Color prevBlackColor;
@@ -11,12 +11,12 @@ public class BoardEditor : Editor
     {
         DrawDefaultInspector();
 
-        Board board = (Board) target;
+        BoardGenerator board = (BoardGenerator) target;
         if (GUILayout.Button("Setup Board")) {
             board.GenerateBoard();
             
-            Pieces pieceManager = board.GetComponentInChildren<Pieces>();
-            pieceManager.SetBoard(pieceManager.initialState);
+            BoardManager boardManager = board.GetComponentInChildren<BoardManager>();
+            boardManager.SetBoard(BoardState.FENStringToBoardState(boardManager.initialFENString));
         }
 
         if (prevWhiteColor != board.whiteColor) {
