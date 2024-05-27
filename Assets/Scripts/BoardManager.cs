@@ -25,6 +25,8 @@ public class BoardManager : MonoBehaviour
 
     public BoardState currentState;
 
+    Quaternion pieceRotation;
+
     public GameObject GetPrefab(int pieceNumber) {
         switch (Piece.getColor(pieceNumber))
         {
@@ -92,13 +94,15 @@ public class BoardManager : MonoBehaviour
             {
                 int piece = positionsArray[y, x];
                 if (piece != 0) {
-                    Instantiate(GetPrefab(piece), new Vector3(x + 0.5f, y + 0.5f, 0f), Quaternion.identity, transform);
+                    Instantiate(GetPrefab(piece), new Vector3(x + 0.5f, y + 0.5f, 0f), pieceRotation, transform);
                 }
             }
         }
     }
 
     void Start() {
+        pieceRotation = FindObjectOfType<PlayerController>().playerIsWhite?Quaternion.identity:Quaternion.Euler(0, 0, 180);
+
         BoardState initialState = BoardState.FENStringToBoardState(initialFENString);
         SetBoard(initialState);
     }

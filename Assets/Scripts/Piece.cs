@@ -14,8 +14,10 @@ public static class Piece
     public const int black = -1;
     public const int empty = 0;
 
-    static Dictionary<int, int> pointsDict = new Dictionary<int, int>() {
-        {1, 1}, {2, 3}, {3, 3}, {4, 5}, {5, 9}, {6, 1000}
+    static Dictionary<int, int> pointsDict = new() {
+        {0, 0},
+        {1, 1}, {2, 3}, {3, 3}, {4, 5}, {5, 9}, {6, 10},
+        {-1, -1}, {-2, -3}, {-3, -3}, {-4, -5}, {-5, -9}, {-6, -10}
     };
 
     public static int getType(int pieceNumber) {
@@ -29,6 +31,6 @@ public static class Piece
     }
 
     public static int getPoints(int pieceNumber) {
-        return pointsDict[Math.Abs(pieceNumber)];
+        return pointsDict[pieceNumber];
     }
 }

@@ -10,15 +10,35 @@ public class PlayerController : MonoBehaviour
 
     SpriteRenderer spriteRenderer;
 
-    int prevRank;
-    int prevFile;
+    public bool playerIsWhite;
+
+    [HideInInspector]
+    public int prevRank;
+    [HideInInspector]
+    public int prevFile;
+
+    [HideInInspector]
+    public int rank;
+    [HideInInspector]
+    public int file;
+
     bool visible;
-    bool whitesTurn;
+
+    [HideInInspector]
+    public bool whitesTurn;
+
+    [HideInInspector]
+    public bool promotionMode;
+
+    [HideInInspector]
+    public bool gameOver;
 
     List<Tuple<int, int>> newPositions;
 
     public BoardManager boardManager;
+    public Agent agent;
     public GameObject movesIndicator;
+    public PromotionMenu promotionMenu;
 
     Tuple<int, int> GetMouseCoordinates()
     {
@@ -26,16 +46,18 @@ public class PlayerController : MonoBehaviour
         return new Tuple<int, int>((int)Math.Floor(mouseToWorldPos.y), (int)Math.Floor(mouseToWorldPos.x));
     }
 
-    Vector3 GetPositionOnBoard(int rank, int file) {
+    Vector3 GetPositionOnBoard(int rank, int file)
+    {
         return new Vector3(file + 0.5f, rank + 0.5f);
     }
 
     void Disappear()
     {
-        while (transform.childCount > 0) {
+        while (transform.childCount > 0)
+        {
             DestroyImmediate(transform.GetChild(0).gameObject);
         }
-        
+
         spriteRenderer.color = transparent;
         visible = false;
     }
@@ -53,46 +75,102 @@ public class PlayerController : MonoBehaviour
 
     void Start()
     {
+        Camera.main.transform.rotation = playerIsWhite ? Quaternion.identity : Quaternion.Euler(0, 0, 180);
+
         whitesTurn = true;
+        promotionMode = false;
+        gameOver = false;
+        promotionMenu.gameObject.SetActive(false);
         spriteRenderer = GetComponent<SpriteRenderer>();
         highlightColor = spriteRenderer.color;
         newPositions = new();
         Disappear();
     }
 
+    public bool GameOverCheck()
+    {
+        if (Minimax.Terminal(boardManager.currentState))
+        {
+            int utility = Minimax.Utility(boardManager.currentState);
+            switch (utility)
+            {
+                case Piece.white * Minimax.maxUtility:
+                    Debug.Log("Game Over: White won");
+                    break;
+
+                case Piece.black * Minimax.maxUtility:
+                    Debug.Log("Game Over: Black won");
+                    break;
+
+                case Piece.empty:
+                    Debug.Log("Game Over: It's a draw");
+                    break;
+
+                default:
+                    throw new Exception($"Invalid Utility: {utility}");
+            }
+            return true;
+        } else return false;
+    }
+
     void Update()
     {
-        if (Input.GetMouseButtonDown((int)MouseButton.LeftMouse))
+        if (!gameOver && playerIsWhite == whitesTurn)
         {
-            Tuple<int, int> mouseCoordinates = GetMouseCoordinates();
-            int rank = mouseCoordinates.Item1;
-            int file = mouseCoordinates.Item2;
-            BoardState currentState = boardManager.currentState;
-
-            int colorAtPos = Piece.getColor(currentState.positionsArray[rank, file]);
-
-            if (colorAtPos == Piece.white && whitesTurn || colorAtPos == Piece.black && !whitesTurn)
+            if (!promotionMode)
             {
-                newPositions = Minimax.GetNewPositions(mouseCoordinates, currentState);
-                if (Minimax.PosWithinBounds(mouseCoordinates))
-                {
-                    if (prevRank == rank && prevFile == file)
+                if (Input.GetMouseButtonDown((int)MouseButton.LeftMouse))
+                {                    
+                    Tuple<int, int> mouseCoordinates = GetMouseCoordinates();
+                    rank = mouseCoordinates.Item1;
+                    file = mouseCoordinates.Item2;
+                    BoardState currentState = boardManager.currentState;
+
+                    int colorAtPos = Piece.getColor(currentState.positionsArray[rank, file]);
+
+                    if (colorAtPos == Piece.white && whitesTurn || colorAtPos == Piece.black && !whitesTurn)
                     {
-                        if (visible) Disappear(); else Appear(newPositions);
+                        newPositions = Minimax.GetNewPositions(mouseCoordinates, currentState);
+                        if (Minimax.PosWithinBounds(mouseCoordinates))
+                        {
+                            if (prevRank == rank && prevFile == file)
+                            {
+                                if (visible) Disappear(); else Appear(newPositions);
+                            }
+                            else
+                            {
+                                transform.position = GetPositionOnBoard(rank, file);
+                                prevRank = rank;
+                                prevFile = file;
+                                Disappear();
+                                Appear(newPositions);
+                            }
+                        }
                     }
-                    else
+                    else if (visible && newPositions.Contains(mouseCoordinates))
                     {
-                        transform.position = GetPositionOnBoard(rank, file);
-                        prevRank = rank;
-                        prevFile = file;
                         Disappear();
-                        Appear(newPositions);
+                        int piece = currentState.positionsArray[prevRank, prevFile];
+                        if (Piece.getType(piece) == Piece.pawn && (rank == 0 || rank == 7))
+                        {
+                            promotionMenu.gameObject.SetActive(true);
+                        }
+                        else
+                        {
+                            boardManager.SetBoard(Minimax.Result(currentState, new Action(new(prevRank, prevFile), new(rank, file))));
+                            whitesTurn = !whitesTurn;
+                        }
                     }
                 }
-            } else if (visible && newPositions.Contains(mouseCoordinates)) {
-                Disappear();
-                boardManager.SetBoard(Minimax.Result(currentState, new Action(new(prevRank, prevFile), new(rank, file))));
+            }
+        }
+        else
+        {
+            gameOver = GameOverCheck();
+            if (!gameOver) {
+                agent.MakeAMove(boardManager.currentState);
                 whitesTurn = !whitesTurn;
+                gameOver = GameOverCheck();
             }
         }
     }

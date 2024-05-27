@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Numerics;
-using UnityEngine.UIElements;
 
 public static class Minimax
 {
+    public const int maxUtility = 50;
+    
     static int ColorAtPos(Tuple<int, int> pos, int[,] positionsArray)
     {
         int rank = pos.Item1, file = pos.Item2;
@@ -41,7 +41,7 @@ public static class Minimax
         }
     }
 
-    public static List<Tuple<int, int>> GetNewPositions(Tuple<int, int> position, BoardState boardState)
+    public static List<Tuple<int, int>> GetNewPositionsUnfiltered(Tuple<int, int> position, BoardState boardState)
     {
         // TODO: Castling
         List<Tuple<int, int>> newPositions = new();
@@ -228,6 +228,66 @@ public static class Minimax
         return newPositions;
     }
 
+    public static bool IsInCheck(BoardState boardState)
+    {
+        BoardState checktestState = new(boardState.positionsArray, !boardState.whitesTurn, boardState.castlingRights, boardState.enPassantTarget, boardState.halfMoveClock, boardState.fullMoveNumber);
+        return CanCaptureKing(checktestState);
+    }
+
+    public static List<Tuple<int, int>> GetNewPositions(Tuple<int, int> position, BoardState boardState)
+    {
+        List<Tuple<int, int>> newPositons = new();
+        int rank = position.Item1, file = position.Item2;
+
+        foreach (Tuple<int, int> newPos in GetNewPositionsUnfiltered(position, boardState))
+        {
+            BoardState resultantState = Result(boardState, new Action(position, newPos));
+            if (!CanCaptureKing(resultantState))
+            {
+                if (Piece.getType(boardState.positionsArray[rank, file]) == Piece.king && Math.Abs(file - newPos.Item2) == 2)
+                {
+                    Action inBetweenAction = new(new(rank, file), new(rank, (file + newPos.Item2) / 2));
+                    if (!(IsInCheck(boardState) || CanCaptureKing(Result(boardState, inBetweenAction))))
+                        newPositons.Add(newPos);
+                }
+                else
+                    newPositons.Add(newPos);
+            }
+        }
+
+        return newPositons;
+    }
+
+    public static List<Action> UnfilteredActions(BoardState boardState)
+    {
+        List<Action> actions = new();
+        int playerColor = boardState.whitesTurn ? Piece.white : Piece.black;
+        int[,] positionsArray = boardState.positionsArray;
+
+        for (int rank = 0; rank < 8; rank++)
+        {
+            for (int file = 0; file < 8; file++)
+            {
+                if (Piece.getColor(positionsArray[rank, file]) == playerColor)
+                {
+                    Tuple<int, int> initialPos = new(rank, file);
+                    foreach (Tuple<int, int> newPos in GetNewPositionsUnfiltered(initialPos, boardState))
+                    {
+                        if (Piece.getType(positionsArray[rank, file]) == Piece.pawn && (newPos.Item1 == 0 || newPos.Item1 == 7))
+                        {
+                            actions.Add(new Action(initialPos, newPos, Piece.knight * playerColor));
+                            actions.Add(new Action(initialPos, newPos, Piece.bishop * playerColor));
+                            actions.Add(new Action(initialPos, newPos, Piece.rook * playerColor));
+                            actions.Add(new Action(initialPos, newPos, Piece.queen * playerColor));
+                        }
+                        else actions.Add(new Action(initialPos, newPos));
+                    }
+                }
+            }
+        }
+        return actions;
+    }
+
     public static List<Action> Actions(BoardState boardState)
     {
         List<Action> actions = new();
@@ -243,7 +303,14 @@ public static class Minimax
                     Tuple<int, int> initialPos = new(rank, file);
                     foreach (Tuple<int, int> newPos in GetNewPositions(initialPos, boardState))
                     {
-                        actions.Add(new Action(initialPos, newPos));
+                        if (Piece.getType(positionsArray[rank, file]) == Piece.pawn && (newPos.Item1 == 0 || newPos.Item1 == 7))
+                        {
+                            actions.Add(new Action(initialPos, newPos, Piece.knight * playerColor));
+                            actions.Add(new Action(initialPos, newPos, Piece.bishop * playerColor));
+                            actions.Add(new Action(initialPos, newPos, Piece.rook * playerColor));
+                            actions.Add(new Action(initialPos, newPos, Piece.queen * playerColor));
+                        }
+                        else actions.Add(new Action(initialPos, newPos));
                     }
                 }
             }
@@ -251,7 +318,18 @@ public static class Minimax
         return actions;
     }
 
-    public static BoardState Result(BoardState boardState, Action action) {
+    public static bool CanCaptureKing(BoardState boardState)
+    {
+        foreach (Action action in UnfilteredActions(boardState))
+        {
+            if (Piece.getType(boardState.positionsArray[action.newPos.Item1, action.newPos.Item2]) == Piece.king)
+                return true;
+        }
+        return false;
+    }
+
+    public static BoardState Result(BoardState boardState, Action action)
+    {
         int[,] positionsArray = (int[,])boardState.positionsArray.Clone();
         int initialRank = action.initialPos.Item1, initialFile = action.initialPos.Item2;
         int finalRank = action.newPos.Item1, finalFile = action.newPos.Item2;
@@ -270,39 +348,43 @@ public static class Minimax
                 castlingRights.queenSideWhite = false;
 
                 // Queen side castling
-                if (initialFile - finalFile == 2) {
+                if (initialFile - finalFile == 2)
+                {
                     positionsArray[0, 3] = Piece.rook * Piece.white;
                     positionsArray[0, 0] = Piece.empty;
                 }
                 // King side castling
-                else if (finalFile - initialFile == 2) {
+                else if (finalFile - initialFile == 2)
+                {
                     positionsArray[0, 5] = Piece.rook * Piece.white;
                     positionsArray[0, 7] = Piece.empty;
                 }
-                
+
                 break;
-            
+
             case Piece.king * Piece.black:
                 castlingRights.kingSideBlack = false;
                 castlingRights.queenSideBlack = false;
 
                 // Queen side castling
-                if (initialFile - finalFile == 2) {
+                if (initialFile - finalFile == 2)
+                {
                     positionsArray[7, 3] = Piece.rook * Piece.black;
                     positionsArray[7, 0] = Piece.empty;
                 }
                 // King side castling
-                else if (finalFile - initialFile == 2) {
+                else if (finalFile - initialFile == 2)
+                {
                     positionsArray[7, 5] = Piece.rook * Piece.black;
                     positionsArray[7, 7] = Piece.empty;
                 }
 
                 break;
-            
+
             case Piece.rook * Piece.white:
                 if (initialFile == 0) castlingRights.queenSideWhite = false; else castlingRights.kingSideWhite = false;
                 break;
-            
+
             case Piece.rook * Piece.black:
                 if (initialFile == 0) castlingRights.queenSideBlack = false; else castlingRights.kingSideBlack = false;
                 break;
@@ -311,7 +393,7 @@ public static class Minimax
                 if (initialRank == 1 && finalRank == 3) enPassantTarget = new(2, initialFile);
                 if (action.newPos.Equals(boardState.enPassantTarget)) positionsArray[initialRank, finalFile] = Piece.empty;
                 break;
-            
+
             case Piece.pawn * Piece.black:
                 if (initialRank == 6 && finalRank == 4) enPassantTarget = new(5, initialFile);
                 if (action.newPos.Equals(boardState.enPassantTarget)) positionsArray[initialRank, finalFile] = Piece.empty;
@@ -323,13 +405,16 @@ public static class Minimax
             case Piece.rook * Piece.white:
                 if (initialFile == 0) castlingRights.queenSideWhite = false; else castlingRights.kingSideWhite = false;
                 break;
-            
+
             case Piece.rook * Piece.black:
                 if (initialFile == 0) castlingRights.queenSideBlack = false; else castlingRights.kingSideBlack = false;
                 break;
         }
-        
-        positionsArray[finalRank, finalFile] = positionsArray[initialRank, initialFile];
+
+        if (action.promotionTo == Piece.empty)
+            positionsArray[finalRank, finalFile] = positionsArray[initialRank, initialFile];
+        else
+            positionsArray[finalRank, finalFile] = action.promotionTo;
         positionsArray[initialRank, initialFile] = Piece.empty;
 
         bool whitesTurn = !boardState.whitesTurn;
@@ -338,5 +423,33 @@ public static class Minimax
         if (whitesTurn) fullMoveNumber++;
 
         return new BoardState(positionsArray, whitesTurn, castlingRights, enPassantTarget, halfMoveClock, fullMoveNumber);
+    }
+
+    public static bool Terminal(BoardState boardState)
+    {
+        if (boardState.halfMoveClock > 99) return true;
+        if (Actions(boardState).Count == 0) return true;
+        return false;
+    }
+
+    public static int EvaluationFunction(BoardState boardState) {
+        int[,] positionsArray = boardState.positionsArray;
+        int totalPoints = 0;
+        for (int rank = 0; rank < 8; rank++)
+        {
+            for (int file = 0; file < 8; file++) {
+                totalPoints += Piece.getPoints(positionsArray[rank, file]);
+            }
+        }
+        return totalPoints;
+    }
+
+    public static int Utility(BoardState boardState)
+    {
+        if (boardState.halfMoveClock > 99) return Piece.empty;
+        if (IsInCheck(boardState)) 
+            return (boardState.whitesTurn?Piece.black:Piece.white) * maxUtility;
+        else
+            return Piece.empty;
     }
 }
