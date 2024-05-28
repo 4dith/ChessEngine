@@ -3,14 +3,16 @@ using System.Collections.Generic;
 
 public class BoardState
 {
-    public int[,] positionsArray;
+    public int[] positionsArray;
     public bool whitesTurn;
     public CastlingRights castlingRights;
-    public Tuple<int, int> enPassantTarget;
+    public int enPassantTarget;
     public int halfMoveClock;
     public int fullMoveNumber;
 
-    public BoardState(int[,] positionsArray, bool whitesTurn, CastlingRights castlingRights, Tuple<int, int> enPassantTarget, int halfMoveClock, int fullMoveNumber)
+    public const int enPassantTargetNull = int.MaxValue;
+
+    public BoardState(int[] positionsArray, bool whitesTurn, CastlingRights castlingRights, int enPassantTarget, int halfMoveClock, int fullMoveNumber)
     {
         this.positionsArray = positionsArray;
         this.whitesTurn = whitesTurn;
@@ -44,7 +46,7 @@ public class BoardState
         }
 
         // First Field: Positions of pieces
-        int[,] positionsArray = new int[8, 8];
+        int[] positionsArray = new int[64];
         string[] positionStrings = fields[0].Split('/');
 
         if (positionStrings.Length != 8)
@@ -64,7 +66,7 @@ public class BoardState
                 }
                 else
                 {
-                    positionsArray[rank, file] = fenPiecesDict[c];
+                    positionsArray[rank * 8 + file] = fenPiecesDict[c];
                     file++;
                 }
             }
@@ -117,7 +119,7 @@ public class BoardState
         }
 
         // Fourth Field: Possible En-Passant targets
-        Tuple<int, int> enPassantTarget = new(-1, -1);
+        int enPassantTarget = enPassantTargetNull;
 
         string enPassantTargetString = fields[3];
         if (enPassantTargetString != "-")
@@ -127,9 +129,8 @@ public class BoardState
             int file = enPassantTargetString[0] - 'a';
             int rank = enPassantTargetString[1] - '1';
             
-            if (Minimax.PosWithinBounds(new(rank, file))) {
-                enPassantTarget = new(rank, file);
-            } else {
+            enPassantTarget = rank * 8 + file; 
+            if (enPassantTarget < 0 || enPassantTarget >= 64) {
                 throw new Exception($"Invalid FEN String: En-passant target = {enPassantTargetString}");
             }
         }
@@ -153,8 +154,8 @@ public struct CastlingRights
     {
         kingSideWhite = K;
         queenSideWhite = Q;
-        kingSideBlack = K;
-        queenSideBlack = Q;
+        kingSideBlack = k;
+        queenSideBlack = q;
     }
 
     public bool kingSideWhite;

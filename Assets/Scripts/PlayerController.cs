@@ -13,14 +13,10 @@ public class PlayerController : MonoBehaviour
     public bool playerIsWhite;
 
     [HideInInspector]
-    public int prevRank;
-    [HideInInspector]
-    public int prevFile;
+    public int prevPos;
 
     [HideInInspector]
-    public int rank;
-    [HideInInspector]
-    public int file;
+    public int pos;
 
     bool visible;
 
@@ -33,7 +29,7 @@ public class PlayerController : MonoBehaviour
     [HideInInspector]
     public bool gameOver;
 
-    List<Tuple<int, int>> newPositions;
+    List<int> newPositions;
 
     public BoardManager boardManager;
     public Agent agent;
@@ -46,9 +42,9 @@ public class PlayerController : MonoBehaviour
         return new Tuple<int, int>((int)Math.Floor(mouseToWorldPos.y), (int)Math.Floor(mouseToWorldPos.x));
     }
 
-    Vector3 GetPositionOnBoard(int rank, int file)
+    Vector3 GetPositionOnBoard(int pos)
     {
-        return new Vector3(file + 0.5f, rank + 0.5f);
+        return new Vector3(pos % 8 + 0.5f, pos / 8 + 0.5f);
     }
 
     void Disappear()
@@ -62,14 +58,14 @@ public class PlayerController : MonoBehaviour
         visible = false;
     }
 
-    void Appear(List<Tuple<int, int>> newPositions)
+    void Appear(List<int> newPositions)
     {
         spriteRenderer.color = highlightColor;
         visible = true;
 
-        foreach (Tuple<int, int> pos in newPositions)
+        foreach (int pos in newPositions)
         {
-            Instantiate(movesIndicator, GetPositionOnBoard(pos.Item1, pos.Item2), Quaternion.identity, transform);
+            Instantiate(movesIndicator, GetPositionOnBoard(pos), Quaternion.identity, transform);
         }
     }
 
@@ -123,44 +119,41 @@ public class PlayerController : MonoBehaviour
                 if (Input.GetMouseButtonDown((int)MouseButton.LeftMouse))
                 {
                     Tuple<int, int> mouseCoordinates = GetMouseCoordinates();
-                    if (Minimax.PosWithinBounds(mouseCoordinates))
+                    int rank = mouseCoordinates.Item1, file = mouseCoordinates.Item2;
+                    
+                    if (0 <= rank && rank < 8 && 0 <= file && file < 8)
                     {
-                        rank = mouseCoordinates.Item1;
-                        file = mouseCoordinates.Item2;
+                        pos = rank * 8 + file;
                         BoardState currentState = boardManager.currentState;
 
-                        int colorAtPos = Piece.getColor(currentState.positionsArray[rank, file]);
+                        int colorAtPos = Piece.getColor(currentState.positionsArray[pos]);
 
                         if (colorAtPos == Piece.white && whitesTurn || colorAtPos == Piece.black && !whitesTurn)
                         {
-                            newPositions = Minimax.GetNewPositions(mouseCoordinates, currentState);
-                            if (Minimax.PosWithinBounds(mouseCoordinates))
+                            newPositions = Minimax.GetNewPositions(pos, currentState);
+                            if (prevPos == pos)
                             {
-                                if (prevRank == rank && prevFile == file)
-                                {
-                                    if (visible) Disappear(); else Appear(newPositions);
-                                }
-                                else
-                                {
-                                    transform.position = GetPositionOnBoard(rank, file);
-                                    prevRank = rank;
-                                    prevFile = file;
-                                    Disappear();
-                                    Appear(newPositions);
-                                }
+                                if (visible) Disappear(); else Appear(newPositions);
+                            }
+                            else
+                            {
+                                transform.position = GetPositionOnBoard(pos);
+                                prevPos = pos;
+                                Disappear();
+                                Appear(newPositions);
                             }
                         }
-                        else if (visible && newPositions.Contains(mouseCoordinates))
+                        else if (visible && newPositions.Contains(pos))
                         {
                             Disappear();
-                            int piece = currentState.positionsArray[prevRank, prevFile];
+                            int piece = currentState.positionsArray[prevPos];
                             if (Piece.getType(piece) == Piece.pawn && (rank == 0 || rank == 7))
                             {
                                 promotionMenu.gameObject.SetActive(true);
                             }
                             else
                             {
-                                boardManager.SetBoard(Minimax.Result(currentState, new Action(new(prevRank, prevFile), new(rank, file))));
+                                boardManager.SetBoard(Minimax.Result(currentState, new Action(prevPos, pos)));
                                 whitesTurn = !whitesTurn;
                             }
                         }

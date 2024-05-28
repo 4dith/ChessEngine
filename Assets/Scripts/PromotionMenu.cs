@@ -42,9 +42,9 @@ public class PromotionMenu : MonoBehaviour
     public void PromoteTo(int pieceType) {
         BoardManager boardManager = playerCtrl.boardManager;
         if (playerCtrl.whitesTurn) {
-            boardManager.SetBoard(Minimax.Result(boardManager.currentState, new Action(new(playerCtrl.prevRank, playerCtrl.prevFile), new(playerCtrl.rank, playerCtrl.file), pieceType * Piece.white)));
+            boardManager.SetBoard(Minimax.Result(boardManager.currentState, new Action(playerCtrl.prevPos, playerCtrl.pos, pieceType * Piece.white)));
         } else {
-            boardManager.SetBoard(Minimax.Result(boardManager.currentState, new Action(new(playerCtrl.prevRank, playerCtrl.prevFile), new(playerCtrl.rank, playerCtrl.file), pieceType * Piece.black)));
+            boardManager.SetBoard(Minimax.Result(boardManager.currentState, new Action(playerCtrl.prevPos, playerCtrl.pos, pieceType * Piece.black)));
         }
         
         playerCtrl.whitesTurn = !playerCtrl.whitesTurn;

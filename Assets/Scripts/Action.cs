@@ -1,33 +1,34 @@
 using System;
-using System.Collections.Generic;
 
 public class Action
 {
-    public Tuple<int, int> initialPos;
-    public Tuple<int, int> newPos;
+    public int initialPos;
+    public int newPos;
     public int promotionTo;
+
+    public static Random randomGen = new();
     
-    public Action(Tuple<int, int> initialPos, Tuple<int, int> newPos, int promotionTo = Piece.empty) {
+    public Action(int initialPos, int newPos, int promotionTo = Piece.empty) {
         this.initialPos = initialPos;
         this.newPos = newPos;
         this.promotionTo = promotionTo;
     }
 
-    public int ActionScoreGuess(BoardState boardState, int aggressiveness=10) {
+    public int ActionScoreGuess(BoardState boardState) {
+        // Improve this function
+
         int actionScoreGuess = 0;
-        int[,] positionsArray = boardState.positionsArray;
-        int initialRank = initialPos.Item1, initialFile = initialPos.Item2;
-        int newRank = newPos.Item1, newFile = newPos.Item2;
+        int[] positionsArray = boardState.positionsArray;
         
-        int movePieceType = Piece.getType(positionsArray[initialRank, initialFile]);
-        int capturePieceType = Piece.getType(positionsArray[newRank, newFile]);
+        int movePieceType = Piece.getType(positionsArray[initialPos]);
+        int capturePieceType = Piece.getType(positionsArray[newPos]);
 
         if (capturePieceType != Piece.empty) {
-            actionScoreGuess = aggressiveness * Piece.getPoints(capturePieceType) - Piece.getPoints(movePieceType);
+            actionScoreGuess = 10 * Piece.getPoints(capturePieceType) - Piece.getPoints(movePieceType);
         }
 
         if (promotionTo != Piece.empty) actionScoreGuess += Math.Abs(Piece.getPoints(promotionTo));
 
-        return actionScoreGuess;
+        return actionScoreGuess * 10 + randomGen.Next(0, 9);
     }
 }

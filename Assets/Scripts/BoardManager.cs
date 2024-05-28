@@ -86,15 +86,15 @@ public class BoardManager : MonoBehaviour
         }
 
         currentState = boardState;
-        int[,] positionsArray = boardState.positionsArray;
+        int[] positionsArray = boardState.positionsArray;
 
-        for (int y = 0; y < 8; y++)
+        for (int rank = 0; rank < 8; rank++)
         {
-            for (int x = 0; x < 8; x++)
+            for (int file = 0; file < 8; file++)
             {
-                int piece = positionsArray[y, x];
+                int piece = positionsArray[rank * 8 + file];
                 if (piece != 0) {
-                    Instantiate(GetPrefab(piece), new Vector3(x + 0.5f, y + 0.5f, 0f), pieceRotation, transform);
+                    Instantiate(GetPrefab(piece), new Vector3(file + 0.5f, rank + 0.5f, 0f), pieceRotation, transform);
                 }
             }
         }
