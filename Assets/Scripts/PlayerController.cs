@@ -110,7 +110,8 @@ public class PlayerController : MonoBehaviour
                     throw new Exception($"Invalid Utility: {utility}");
             }
             return true;
-        } else return false;
+        }
+        else return false;
     }
 
     void Update()
@@ -120,45 +121,48 @@ public class PlayerController : MonoBehaviour
             if (!promotionMode)
             {
                 if (Input.GetMouseButtonDown((int)MouseButton.LeftMouse))
-                {                    
+                {
                     Tuple<int, int> mouseCoordinates = GetMouseCoordinates();
-                    rank = mouseCoordinates.Item1;
-                    file = mouseCoordinates.Item2;
-                    BoardState currentState = boardManager.currentState;
-
-                    int colorAtPos = Piece.getColor(currentState.positionsArray[rank, file]);
-
-                    if (colorAtPos == Piece.white && whitesTurn || colorAtPos == Piece.black && !whitesTurn)
+                    if (Minimax.PosWithinBounds(mouseCoordinates))
                     {
-                        newPositions = Minimax.GetNewPositions(mouseCoordinates, currentState);
-                        if (Minimax.PosWithinBounds(mouseCoordinates))
+                        rank = mouseCoordinates.Item1;
+                        file = mouseCoordinates.Item2;
+                        BoardState currentState = boardManager.currentState;
+
+                        int colorAtPos = Piece.getColor(currentState.positionsArray[rank, file]);
+
+                        if (colorAtPos == Piece.white && whitesTurn || colorAtPos == Piece.black && !whitesTurn)
                         {
-                            if (prevRank == rank && prevFile == file)
+                            newPositions = Minimax.GetNewPositions(mouseCoordinates, currentState);
+                            if (Minimax.PosWithinBounds(mouseCoordinates))
                             {
-                                if (visible) Disappear(); else Appear(newPositions);
+                                if (prevRank == rank && prevFile == file)
+                                {
+                                    if (visible) Disappear(); else Appear(newPositions);
+                                }
+                                else
+                                {
+                                    transform.position = GetPositionOnBoard(rank, file);
+                                    prevRank = rank;
+                                    prevFile = file;
+                                    Disappear();
+                                    Appear(newPositions);
+                                }
+                            }
+                        }
+                        else if (visible && newPositions.Contains(mouseCoordinates))
+                        {
+                            Disappear();
+                            int piece = currentState.positionsArray[prevRank, prevFile];
+                            if (Piece.getType(piece) == Piece.pawn && (rank == 0 || rank == 7))
+                            {
+                                promotionMenu.gameObject.SetActive(true);
                             }
                             else
                             {
-                                transform.position = GetPositionOnBoard(rank, file);
-                                prevRank = rank;
-                                prevFile = file;
-                                Disappear();
-                                Appear(newPositions);
+                                boardManager.SetBoard(Minimax.Result(currentState, new Action(new(prevRank, prevFile), new(rank, file))));
+                                whitesTurn = !whitesTurn;
                             }
-                        }
-                    }
-                    else if (visible && newPositions.Contains(mouseCoordinates))
-                    {
-                        Disappear();
-                        int piece = currentState.positionsArray[prevRank, prevFile];
-                        if (Piece.getType(piece) == Piece.pawn && (rank == 0 || rank == 7))
-                        {
-                            promotionMenu.gameObject.SetActive(true);
-                        }
-                        else
-                        {
-                            boardManager.SetBoard(Minimax.Result(currentState, new Action(new(prevRank, prevFile), new(rank, file))));
-                            whitesTurn = !whitesTurn;
                         }
                     }
                 }
@@ -167,8 +171,11 @@ public class PlayerController : MonoBehaviour
         else
         {
             gameOver = GameOverCheck();
-            if (!gameOver) {
+            if (!gameOver)
+            {
+                float timestamp = Time.realtimeSinceStartup;
                 agent.MakeAMove(boardManager.currentState);
+                Debug.Log($"{Time.realtimeSinceStartup - timestamp} seconds");
                 whitesTurn = !whitesTurn;
                 gameOver = GameOverCheck();
             }

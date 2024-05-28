@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 public static class Minimax
 {
@@ -315,7 +316,9 @@ public static class Minimax
                 }
             }
         }
-        return actions;
+        
+        //return actions;
+        return actions.OrderByDescending(a=>a.ActionScoreGuess(boardState)).ToList();
     }
 
     public static bool CanCaptureKing(BoardState boardState)
